@@ -1,0 +1,58 @@
+  def generator(self, z, y):
+    with tf.variable_scope("generator") as scope:
+      yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
+
+      self.z_, self.h0_w, self.h0_b = linear(z, 1024*4*4, 'g_h0_lin',with_w=True)     
+      
+      self.h0 = tf.reshape(self.z_,[-1,4,4,1024])
+      h0 = tf.nn.relu(self.g_bn0(self.h0))
+       
+      h1 = deconv2d(h0,[self.batch_size,8,8,256],name='g_h1_dconv')
+      h1 = tf.nn.relu(self.g_bn1(h1))
+        
+      h2 = deconv2d(h1,[self.batch_size,16,16,128],name='g_h2_dconv')
+      h2 = tf.nn.relu(self.g_bn2(h2))
+        
+      h3 = unpool(h2,name='g_h3_unpool')
+        
+      h4 = deconv2d(h3,[self.batch_size,64,64,64],name='g_h4_dconv')
+      h4 = tf.nn.relu(self.g_bn3(h4))
+      print(h4.get_shape())
+      h4c = conv_cond_concat(h4, yb)
+      print(h4c.get_shape())  
+      h5 = unpool(h4c,name='g_h5_unpool')
+      print(h5.get_shape())  
+      h6 = deconv2d(h5,[self.batch_size,256,256,3],name='g_h6_dconv')
+      print(h6.get_shape())  
+      return tf.nn.tanh(h6)
+
+  def sampler(self, y):
+    z = tf.placeholder(tf.float32, [self.batch_size, self.z_dim], name='z')
+    _, z = self.discriminator(self.init_pic, y, True)
+        
+    with tf.variable_scope("generator") as scope:
+      scope.reuse_variables()
+      yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
+      self.z_, self.h0_w, self.h0_b = linear(z, 1024*4*4, 'g_h0_lin',with_w=True)
+        
+      self.h0 = tf.reshape(self.z_,[-1,4,4,1024])
+      h0 = tf.nn.relu(self.g_bn0(self.h0))
+        
+      h1 = deconv2d(h0,[self.batch_size,8,8,256],name='g_h1_dconv')
+      h1 = tf.nn.relu(self.g_bn1(h1))
+       
+      h2 = deconv2d(h1,[self.batch_size,16,16,128],name='g_h2_dconv')
+      h2 = tf.nn.relu(self.g_bn2(h2))
+        
+      h3 = unpool(h2,name='g_h3_unpool')
+        
+      h4 = deconv2d(h3,[self.batch_size,64,64,64],name='g_h4_dconv')
+      h4 = tf.nn.relu(self.g_bn3(h4))
+       
+      h4c = conv_cond_concat(h4, yb)
+        
+      h5 = unpool(h4c,name='g_h5_unpool')
+        
+      h6 = deconv2d(h5,[self.batch_size,256,256,3],name='g_h6_dconv')
+        
+      return tf.nn.tanh(h6)
