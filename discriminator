@@ -1,0 +1,18 @@
+ def discriminator(self, image,y , reuse=False):
+    with tf.variable_scope("discriminator") as scope:
+      if reuse:
+        scope.reuse_variables()
+      
+      yb = tf.reshape(y, [self.batch_size, 1, 1, self.y_dim])
+      
+      h0 = lrelu(conv2d(image, 64, name='d_h0_conv'))
+      h1 = tf.nn.max_pool(h0,[1,2,2,1],[1,2,2,1],padding='SAME',name='d_h1_pool')
+      h1c = conv_cond_concat(h1, yb)
+      h2 = lrelu(self.d_bn1(conv2d(h1c, 128, name='d_h2_conv')))
+      h3 = tf.nn.max_pool(h2,[1,2,2,1],[1,2,2,1],padding='SAME',name='d_h3_pool')
+      h4 = lrelu(self.d_bn2(conv2d(h3, 256, name='d_h4_conv')))
+      h5 = lrelu(self.d_bn3(conv2d(h4, 1024, name='d_h5_conv')))
+      h5 = tf.reshape(h5, [self.batch_size, -1])
+      h6 = linear(h5, self.z_dim, 'd_h6_lin')
+        
+      return tf.nn.tanh(h6), h6      
